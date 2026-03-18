@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TNFSC Smart Fire Intelligence Portal</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Leaflet Resources (Free/Open Source Map) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <meta name="description" content="TNFRS Integrated Command Center - Real-time Fire Risk Prediction and Monitoring">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#ff3e3e">
+</head>
+<body class="command-center">
+    <div class="overlay"></div>
+    
+    <!-- ── COMMAND INITIALIZATION BOOT SCREEN ── -->
+    <div id="boot-screen" class="boot-screen">
+        <div class="boot-terminal glass">
+            <div class="terminal-header">
+                <span class="term-dot red"></span>
+                <span class="term-dot yellow"></span>
+                <span class="term-dot green"></span>
+                <span class="terminal-title">TNFRS COMMAND INITIALIZATION v2.6</span>
+            </div>
+            <div id="boot-log" class="boot-log">
+                <p class="boot-line">[SYSTEM] INITIALIZING CORE AI MODULES...</p>
+                <p class="boot-line">[NET] CONNECTING TO METEOROLOGICAL API SATELLITE...</p>
+                <p class="boot-line">[AUTH] SECURE COMMAND LINK ESTABLISHED.</p>
+            </div>
+            <div id="location-prompt" class="location-prompt" style="display:none;">
+                <h3><i data-lucide="map-pin"></i> GEOSPATIAL CALIBRATION REQUIRED</h3>
+                <p>Establishing regional baseline. The system requires precise GPS coordinates to synchronize real-time climate telemetry.</p>
+                <div class="btn-group">
+                    <button id="detect-location-btn" class="detect-btn">
+                        <i data-lucide="crosshair"></i> AUTO-DETECT COMMAND LOCATION
+                    </button>
+                    <button id="skip-location-btn" class="skip-btn">MANUAL OVERRIDE (CHENNAI)</button>
+                </div>
+                <div id="loc-status" class="loc-status" style="display:none;">
+                    <div class="loader-small spin"></div>
+                    <span>LOCATING SATELLITE FIX...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <header class="main-header">
+        <div class="header-left">
+            <div class="title-group">
+                <h1><span style="color:var(--fire-red)">TNFRS</span> INTEGRATED COMMAND CENTER</h1>
+                <div class="header-status-row">
+                    <p class="subtitle">Fire & Rescue Services Department | Govt. of Tamil Nadu</p>
+                    <span id="command-region-badge" class="command-region-badge" style="display:none;">
+                        <i data-lucide="map-pin"></i> CALIBRATED: <span id="command-city">...</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="weather-widget" id="weather-widget" title="METEOROLOGICAL COMMAND CENTER">
+                <span id="wx-condition" style="font-size: 1.2rem;">☀️</span>
+                <span id="wx-temp" style="color: var(--emergency-amber);">33.3°C</span>
+                <span class="wx-divider">|</span>
+                <span id="wx-humidity">💧 63%</span>
+                <span class="wx-divider">|</span>
+                <span id="wx-uv">📡 MET-STATION: LIVE</span>
+            </div>
+            <div class="system-status">
+                <span class="status-dot pulse"></span>
+                <span class="status-text">SYSTEM STATUS: ACTIVE</span>
+            </div>
+            <div class="timer" id="current-time">21:32:07</div>
+            <div class="ai-badge" id="model-badge" title="AI Model Status">ML-CORE: ACTIVE</div>
+            <div class="push-badge" id="push-badge" title="Mobile Push Alerts" style="display:none;">
+                <span class="push-dot"></span> 📱 PUSH ALERTS LIVE
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard-grid">
+        <!-- Sidebar: Resource Planning -->
+        <aside class="sidebar glass">
+            <div class="sidebar-section">
+                <h3><i data-lucide="map-pin"></i> RESOURCE PLANNING</h3>
+                <div class="tool-group">
+                    <label>Optimal Station Placement</label>
+                    <div class="tool-control">
+                        <button class="btn-tool active" id="auto-calculate-btn">Auto-Calculate</button>
+                        <button class="btn-tool" id="manual-plot-btn">Manual Plot</button>
+                    </div>
+                </div>
+                <div class="tool-group">
+                    <label>Dynamic Dispatch Optimization</label>
+                    <label class="toggle-switch" for="dispatch-toggle">
+                        <input type="checkbox" id="dispatch-toggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="tool-group planning-tool">
+                    <label>Strategic Planning Mode</label>
+                    <label class="toggle-switch" for="planning-toggle">
+                        <input type="checkbox" id="planning-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <!-- MISSION WORKFLOW STATUS (Step-by-Step Logic) -->
+            <div class="sidebar-section">
+                <h3><i data-lucide="list-checks"></i> MISSION WORKFLOW</h3>
+                <div class="workflow-tracker" id="workflow-tracker">
+                    <div class="wf-step active" data-step="1">
+                        <span class="wf-dot"></span>
+                        <span class="wf-label">Data Collection</span>
+                    </div>
+                    <div class="wf-step" data-step="2">
+                        <span class="wf-dot"></span>
+                        <span class="wf-label">Ingestion & Preprocessing</span>
+                    </div>
+                    <div class="wf-step" data-step="3">
+                        <span class="wf-dot"></span>
+                        <span class="wf-label">AI Prediction Engine</span>
+                    </div>
+                    <div class="wf-step" data-step="4">
+                        <span class="wf-dot"></span>
+                        <span class="wf-label">Incident Detection</span>
+                    </div>
+                    <div class="wf-step" data-step="5">
+                        <span class="wf-dot"></span>
+                        <span class="wf-label">Fire Spread Simulation</span>
+                    </div>
+                    <div class="wf-step" data-step="6">
+                        <span class="wf-dot"></span>
+                        <span class="wf-label">Smart Dispatch & Coordination</span>
+                    </div>
+                    <div class="wf-step" data-step="7">
+                        <span class="wf-dot"></span>
+                        <span class="wf-label">Tactical Route Optimization</span>
+                    </div>
+                    <div class="wf-step" data-step="8">
+                        <span class="wf-dot"></span>
+                        <span class="wf-label">Hydrant & Resource ID</span>
+                    </div>
+                    <div class="wf-step" data-step="9">
+                        <span class="wf-dot"></span>
+                        <span class="wf-label">Drone Surveillance HUD</span>
+                    </div>
+                    <div class="wf-step" data-step="10">
+                        <span class="wf-dot"></span>
+                        <span class="wf-label">AI Strategic Advisor Briefing</span>
+                    </div>
+                    <div class="wf-step" data-step="11">
+                        <span class="wf-dot"></span>
+                        <span class="wf-label">Incident Reporting & Logging</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3><i data-lucide="brain-circuit"></i> AI MODEL STATUS</h3>
+                <div class="ai-status-grid">
+                    <div class="ai-stat"><span class="as-label">Model Version</span><span class="as-val" id="ai-version">v1</span></div>
+                    <div class="ai-stat"><span class="as-label">Dataset Size</span><span class="as-val" id="ai-dataset">1200</span></div>
+                    <div class="ai-stat"><span class="as-label">RF Accuracy</span><span class="as-val neon-blue" id="ai-rf-acc">–</span></div>
+                    <div class="ai-stat"><span class="as-label">GB Accuracy</span><span class="as-val neon-red" id="ai-gb-acc">–</span></div>
+                    <div class="ai-stat"><span class="as-label">Last Retrained</span><span class="as-val" id="ai-last">–</span></div>
+                    <div class="ai-stat"><span class="as-label">Retrain Rounds</span><span class="as-val" id="ai-rounds">0</span></div>
+                </div>
+                <button class="btn-retrain" id="retrain-btn">🔄 Force Retrain Now</button>
+                <p class="ai-note">Auto-retrains every 2 min on live data</p>
+            </div>
+
+            <div class="sidebar-section">
+                <h3><i data-lucide="shield"></i> COMMAND DIRECTORY</h3>
+                <div class="search-box">
+                    <input type="text" id="station-search" placeholder="Search official stations...">
+                    <i data-lucide="search"></i>
+                </div>
+                <div class="station-contacts-list" id="station-directory">
+                    <div class="station-contact-item">
+                        <span class="s-name">Loading database...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3><i data-lucide="building-2"></i> SMART BUILDING SCORES</h3>
+                <div class="search-box">
+                    <input type="text" id="building-search" placeholder="Enter building name...">
+                    <button id="check-building-btn" class="btn-mini"><i data-lucide="check-circle-2"></i></button>
+                </div>
+                <div id="building-score-result" class="building-score-result" style="display:none;">
+                    <div class="b-score-header">
+                        <span id="b-res-name">Building A</span>
+                        <span id="b-res-grade" class="grade-badge">A</span>
+                    </div>
+                    <div class="b-score-val"><span id="b-res-score">45.2</span>% RISK</div>
+                    <div class="b-score-meta" id="b-res-factors"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center: Interactive Heatmap -->
+        <section class="map-view glass">
+            <!-- ACTIVE ALERTS BANNER -->
+            <div class="alert-banner" id="alert-banner" style="display:none;">
+                <div class="alert-banner-title"><i data-lucide="alert-triangle"></i> ACTIVE FIRE RISK ALERTS</div>
+                <div class="alert-cards-row" id="alert-cards-row"></div>
+            </div>
+            <div class="map-header">
+                <h2>RISK HEATMAP: <span id="active-zone">Chennai Metropolitan Area</span></h2>
+                <div class="map-controls">
+                    <button id="global-view-btn" class="btn-map" title="Show all TNFRS stations"><i data-lucide="globe"></i> GLOBAL VIEW</button>
+                    <button id="regional-focus-btn" class="btn-map" title="Show risk for your surrounding location only"><i data-lucide="locating"></i> REGIONAL FOCUS</button>
+                    <button class="btn-map active">Heatmap</button>
+                    <button class="btn-map">Stations</button>
+                </div>
+            </div>
+            <div class="map-container" id="risk-map">
+                <!-- HUD Overlays -->
+                <div class="map-hud" id="planning-hud" style="display: none;">
+                    <div class="hud-stat">
+                        <span class="hud-label">CITY SAFETY SCORE</span>
+                        <span class="hud-val" id="city-safety-score">65.0%</span>
+                    </div>
+                    <div class="hud-actions">
+                        <button class="btn-hud" id="optimize-btn"><i data-lucide="zap"></i> AI OPTIMIZE</button>
+                        <button class="btn-hud" id="clear-stations">CLEAR ALL</button>
+                    </div>
+                </div>
+                <!-- Live Interactive Map -->
+                <div id="live-map-container" style="width:100%; height:100%; position:absolute; top:0; left:0; z-index:1;"></div>
+                
+
+                <!-- VISUAL INTELLIGENCE HUD (CCTV PiP) -->
+                <div class="visual-intel-hud glass" id="cctv-hud" style="display:none;">
+                    <div class="hud-header">
+                        <i data-lucide="camera"></i> <span>VISUAL INTELLIGENCE (CCTV)</span>
+                        <div class="feed-status pulse">LIVE</div>
+                    </div>
+                    <div class="cctv-pip">
+                        <div class="cctv-placeholder">
+                            <i data-lucide="eye" class="eye-icon"></i>
+                            <span>SYNCING FEED...</span>
+                        </div>
+                        <div class="cctv-overlay">
+                            <div class="overlay-top">
+                                <span id="cctv-feed-id">CAM-0000</span>
+                                <span id="cctv-zone">LOCATION</span>
+                            </div>
+                            <div class="overlay-bottom">
+                                <span id="cctv-timestamp">00:00:00</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cctv-metrics">
+                        <div class="c-metric">
+                            <span class="c-label">SMOKE DENSITY</span>
+                            <span class="c-val" id="cctv-smoke">0.0%</span>
+                        </div>
+                        <div class="c-metric">
+                            <span class="c-label">THERMAL STATUS</span>
+                            <span class="c-val" id="cctv-thermal">NOMINAL</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right: Metrics and ML Insights -->
+        <section class="analytics-panel">
+            <!-- RELOCATED DRONE HUD -->
+            <div class="drone-sidebar-hud glass" id="drone-hud">
+                <div class="hud-header">
+                    <i data-lucide="scan-eye"></i> <span>DRONE FLEET TELEMETRY</span>
+                </div>
+                <div class="drone-grid" id="drone-list"></div>
+            </div>
+
+            <div class="ai-advisor glass">
+                <div class="advisor-header">
+                    <h3><i data-lucide="shield-check"></i> AI STRATEGIC ADVISOR</h3>
+                    <span class="status-badge" id="advisor-alert">STABLE</span>
+                </div>
+                <div class="briefing-content">
+                    <p id="advisor-text">Initializing neural link... fetching operational telemetry...</p>
+                    <div class="advisor-reasoning glass" id="advisor-reasoning" style="display:none;">
+                        <i data-lucide="info"></i> <span id="reasoning-text"></span>
+                    </div>
+                    <div class="advisor-prediction" id="advisor-prediction" style="display:none;">
+                        <div class="pred-label">INCIDENT PROBABILITY: <span id="pred-val">LOW</span></div>
+                        <div class="danger-meter"><div id="danger-fill" class="fill"></div></div>
+                    </div>
+                </div>
+                <div class="advisor-footer">
+                    <div class="log-stream" id="advisor-logs">
+                        <span>> System handshake...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dispatch-advisor glass" id="dispatch-advisor">
+                <div class="advisor-header">
+                    <h3><i data-lucide="navigation"></i> CITIZEN ALERT PORTAL</h3>
+                    <div class="dispatch-header-actions">
+                        <button id="report-fire-btn" class="btn-mini btn-pulse" style="display:none;"><i data-lucide="flame"></i> REPORT FIRE</button>
+                        <span class="status-badge" id="dispatch-zone-label">Citizen Inbound: Click Zone</span>
+                    </div>
+                </div>
+                <div id="dispatch-results">
+                    <p style="color:var(--text-secondary); font-size:0.75rem; padding:0.5rem;">Select location on heatmap to initiate a Citizen Emergency Report or Dispatch analysis.</p>
+                </div>
+            </div>
+
+            <div class="metrics-row">
+                <div class="metric-card glass">
+                    <span class="label">Current Risk Probability</span>
+                    <span class="value neon-red" id="risk-score">84.2%</span>
+                    <span class="trend up">▲ 2.4%</span>
+                    <div id="risk-diagnostics" class="diagnostics-tag">Top Driver: Building Density</div>
+                </div>
+                <div class="metric-card glass">
+                    <span class="label">Est. Response Time</span>
+                    <span class="value neon-blue">5:42 <small>min</small></span>
+                    <span class="trend down">▼ 15s</span>
+                </div>
+                <div class="metric-card glass">
+                    <span class="label">Seasonal Frequency</span>
+                    <span class="value">High</span>
+                    <div class="freq-bar"><div class="fill" style="width: 78%"></div></div>
+                </div>
+            </div>
+
+            <div class="ml-insights glass compact">
+                <div class="ml-header">
+                    <h3><i data-lucide="cpu"></i> ML INSIGHTS</h3>
+                    <div class="model-meta-small" id="model-meta-text">RF + GB Ensemble</div>
+                </div>
+                <div class="chart-container-small">
+                    <canvas id="ml-chart"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="live-ticker-footer">
+        <div class="ticker-label">COMMAND TELEMETRY SYNC</div>
+        <div class="ticker-wrapper">
+            <div class="ticker-content" id="data-ticker">
+                METEOROLOGICAL API: Wind 12km/h NE | Humidity 64% | Temp 29°C | INFRASTRUCTURE REPOSITORY: Water Pressure Nominal (Zone 4) | Fire Hydrant Grid: 98.4% Operational | Traffic Congestion: High (GST Road)
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
